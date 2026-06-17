@@ -23,7 +23,8 @@ struct ModelsimModule : public magic< T >
   static void Process( void *aStruct )
   { 
     try {
-      T* lStruct = (T*) aStruct;      
+      T* lStruct = (T*) aStruct;  
+      
       lStruct->Apply( []( auto&&... params ){ ( params.get() , ... ); } ); // Get the current value on all magic members from Modelsim to FLI via Variadic lambda invoking a C++17 fold-expression       
       if( lStruct->clk.mData ){
         lStruct->Handler();  // On rising_edge, call handler    

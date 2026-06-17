@@ -51,7 +51,7 @@ bool Compare ( const magic< T >& aA , const U&... aB )
 
 template< typename T >
 bool operator== ( const magic< T >& aA , const magic< T >& aB )
-{
+{  
   bool lBool;
   aB.Apply( [&]( auto&... params ){ lBool = Compare( aA , params... ); } ); // Variadic lambda
   return lBool;
