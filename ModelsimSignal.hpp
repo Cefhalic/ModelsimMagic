@@ -300,37 +300,20 @@ struct ModelsimSignal
 
   void connect( const char* aName )
   {
-    if( mSignal != NULL ) {
-      mti_PrintFormatted( "Signal already connected" );
-      mti_FatalError();      
-    }      
-
+    if( mSignal != NULL ) throw std::runtime_error( "Signal already connected" );
     mSignal = mti_FindSignal( (char*)(aName) );
-
-    if( mSignal == NULL ) {
-      mti_PrintFormatted( "Signal '%s' not found" , aName );
-      mti_FatalError();      
-    }      
-    
+    if( mSignal == NULL ) throw std::runtime_error( std::format( "Signal '{}' not found" , aName ) );
   }
   
-  void get()
+  void get_signal()
   { 
-    if( mSignal == NULL ) {
-      mti_PrintFormatted( "Signal not connected" );
-      mti_FatalError();      
-    }      
-
+    if( mSignal == NULL ) throw std::runtime_error( "Signal not connected" );
     mti_get( mSignal , mData ); 
   }
 
-  void set()
+  void set_signal()
   { 
-    if( mSignal == NULL ) {
-      mti_PrintFormatted( "Signal not connected" );
-      mti_FatalError();      
-    }      
-
+    if( mSignal == NULL ) throw std::runtime_error( "Signal not connected" );
     mti_set( mSignal , mData ); 
   }
 

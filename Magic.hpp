@@ -16,12 +16,11 @@ struct magic
   template< typename U > void Apply( const U& aFn ) const { static_cast< const Derived* >( this )->Implement( aFn ); }  
 
   template< typename... U >
-  void set( const U&... aB )
+  void magic_set( const U&... aB )
   {
     this->Apply( [&]( auto&&... params ){ ( (params=aB) , ... ); } ); // Variadic lambda invoking a C++17 fold-expression
   }
-  
-  // std::string MagicFields() const { return static_cast< const Derived* >( this )->ImplementMagicFields(); }
+
 };
 
 
@@ -57,7 +56,8 @@ bool operator== ( const magic< T >& aA , const magic< T >& aB )
   return lBool;
 }
 
-static std::vector< std::string > MagicDelimeter( const std::string& aStr )
+
+std::vector< std::string > MagicDelimeter( const std::string& aStr )
 {
   const std::regex lRegex( "\\s*,\\s*" ); 
   return std::vector<std::string>( std::sregex_token_iterator( aStr.begin(), aStr.end(), lRegex , -1 ), std::sregex_token_iterator() );  
