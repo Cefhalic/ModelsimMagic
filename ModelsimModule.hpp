@@ -23,13 +23,11 @@ struct ModelsimModule : public magic< T >
   static void Process( void *aStruct )
   { 
     try {
-      T* lStruct = (T*) aStruct;  
-      
+      T* lStruct = (T*) aStruct;        
       lStruct->Apply( []( auto&&... params ){ ( params.get() , ... ); } ); // Get the current value on all magic members from Modelsim to FLI via Variadic lambda invoking a C++17 fold-expression       
-      if( lStruct->clk.mData ){
-        lStruct->Handler();  // On rising_edge, call handler    
-        lStruct->Apply( []( auto&&... params ){ ( params.set() , ... ); } ); // Set the updated value on all magic members from Modelsim to FLI via Variadic lambda invoking a C++17 fold-expression  
-      }
+      if( ! lStruct->clk.mData ) return; // On falling_edge, return        
+      lStruct->Handler();   
+      lStruct->Apply( []( auto&&... params ){ ( params.set() , ... ); } ); // Set the updated value on all magic members from Modelsim to FLI via Variadic lambda invoking a C++17 fold-expression  
     } catch( const std::exception& aExc ) {
       mti_PrintMessage( aExc.what() );
       mti_FatalError();      
