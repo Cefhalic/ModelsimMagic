@@ -243,21 +243,17 @@ void mti_set( mtiSignalIdT& aMtiId , const magic< T > & aArg )
 
 
 
-
-
-
-
-
-
-
-
 // ------------------------------------------------------------------------------
 template< typename T >
-struct ModelsimSignal
+class ModelsimSignal
 {
+template< typename U > friend class ModelsimModule;  
+  
+protected:
   mtiSignalIdT mSignal;
   T mData;
 
+public:
   ModelsimSignal() : mSignal( NULL ) , mData()
   {}
 
@@ -285,13 +281,33 @@ struct ModelsimSignal
     mti_set( mSignal , mData ); 
   }
     
+  T& value()
+  {
+    return mData;
+  }    
+  
+  T& operator* ()
+  {
+    return mData;
+  }   
+
+  T* operator-> ()
+  {
+    return &mData;
+  }   
+
+  void set( const T& aRef )
+  {
+    mData = aRef;
+  }  
+    
 };
 
-template< typename T >
-std::ostream& operator<< ( std::ostream& aStr , const ModelsimSignal< T >& aArg )
-{
-  return ( aStr << aArg.mData );
-}
+// template< typename T >
+// std::ostream& operator<< ( std::ostream& aStr , const ModelsimSignal< T >& aArg )
+// {
+  // return ( aStr << aArg.mData );
+// }
 // ------------------------------------------------------------------------------
 
 
@@ -302,8 +318,25 @@ std::ostream& operator<< ( std::ostream& aStr , const ModelsimSignal< T >& aArg 
 
 
 
+// ------------------------------------------------------------------------------
+template< typename T , std::size_t size>
+class ModelsimPipeline : public ModelsimSignal< std::array< T , size > >
+{
+public:
 
+  void set0( const T& aRef )
+  {
+    for( int i=(size-1); i!=0 ; --i ) this->mData.at(i) = this->mData.at(i-1); // SHOULD CHECK mSignal ticks to get direction
+    this->mData.at(0) = aRef;
+  } 
 
+  T& value0()
+  {
+    return this->mData.at(0);
+  }  
+  
+};
+// ------------------------------------------------------------------------------
 
 
 
