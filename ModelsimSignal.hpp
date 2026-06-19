@@ -54,18 +54,14 @@ void mti_get( mtiSignalIdT& aMtiId , uint64_t& aWord )
 
     mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
 
-    // uint64_t lInt(0);
-    // uint64_t lMask(0x8000000000000000);
     aWord = 0;
     uint64_t lMask( 1 << (Size-1) );     
     for ( int i(0); i != Size; ++i ) {
       if( mti_GetSignalValue(lBuf[i])==STD_LOGIC_1 ) aWord |= lMask;      
-      // if( mti_GetSignalValue(lBuf[i])==STD_LOGIC_1 ) lInt |= lMask;
       lMask >>= 1;
     }
 
-    // aWord = lInt >> (64-Size);
-    mti_VsimFree( lBuf );  
+    mti_VsimFree( lBuf );    
   }
 }
 // ------------------------------------------------------------------------------
@@ -82,17 +78,14 @@ void mti_get( mtiSignalIdT& aMtiId , int64_t& aWord )
 
     mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
 
-    // int64_t lInt(0);
     aWord = 0;
     uint64_t lMask( 1 << (Size-1) );    
     for ( int i(0); i != Size; ++i ) {
       if( mti_GetSignalValue(lBuf[i])==STD_LOGIC_1 ) aWord |= lMask;
-      // if( mti_GetSignalValue(lBuf[i])==STD_LOGIC_1 ) lInt |= lMask;
       lMask >>= 1;
     }
 
-    // aWord = lInt >> (64-Size);
-    mti_VsimFree( lBuf );  
+    mti_VsimFree( lBuf );     
   }
 }
 // ------------------------------------------------------------------------------
@@ -117,9 +110,6 @@ void mti_get( mtiSignalIdT& aMtiId , std::array< T , Size >& aParallel )
   if( FliSize != Size ) throw std::runtime_error( std::format( "FLI size ({}) != C++ size ({})" , FliSize , Size ) );
   
   mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
-
-  // for ( int i(0); i != Size; ++i ) std::cout << i << " : " <<  lBuf[i] << " : " << aParallel[i] << std::endl;
-  // std::cout << TypeKind[ lKind ] << " " << typeid( aParallel ).name() << std::endl;
 
   if( mti_TickLeft( lType ) < mti_TickRight( lType ) ) {
     for ( int i(0); i != Size; ++i ) mti_get( lBuf[i] , aParallel[i] );
@@ -164,7 +154,6 @@ void mti_set( mtiSignalIdT& aMtiId , const uint64_t& aWord )
 
     mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
 
-//    uint64_t lMask(0x8000000000000000);
     uint64_t lMask( 1 << (Size-1) );
     for ( int i(0); i != Size; ++i ) {
       mti_SetSignalValue( lBuf[i] , (aWord&lMask) ? STD_LOGIC_1 : STD_LOGIC_0 );
@@ -188,7 +177,6 @@ void mti_set( mtiSignalIdT& aMtiId , const int64_t& aWord )
 
     mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
 
-    // uint64_t lMask(0x8000000000000000);
     uint64_t lMask( 1 << (Size-1) );    
     for ( int i(0); i != Size; ++i ) {
       mti_SetSignalValue( lBuf[i] , (aWord&lMask) ? STD_LOGIC_1 : STD_LOGIC_0 );
