@@ -23,3 +23,15 @@ void aFunction2 ( S& aArg ) {
 
 aMagic.Apply( []( auto&&... params ){ ( aFunction2( params ) , ... ); } );
 ```
+
+# Coiterating while applying using C++20 fold expressions
+
+```
+template< typename S >
+void aFunction3 ( const std::string& aName , S& aArg ) {
+  //  ... Do something with aArg ...
+}
+
+auto lIt = lStruct->MagicFields().begin();
+aMagic.Apply( [&]( auto&&... params ){ ( aFunction3( *lIt++ , params ) , ... ); } );
+```
