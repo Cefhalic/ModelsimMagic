@@ -11,10 +11,6 @@
 template< typename T >
 struct ModelsimModule : public magic< T >
 { 
-  // Constructor
-  ModelsimModule()
-  {}
-
   ModelsimSignal<bool> clk;
   
   virtual void Handler() = 0;  

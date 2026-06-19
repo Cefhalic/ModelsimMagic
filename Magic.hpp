@@ -6,8 +6,42 @@
 #pragma once
 
 #include <iostream>
+#include <string>
 #include <vector>
 #include <regex>
+
+
+// ------------------------------------------------------------------------------
+// Utility
+#include <format>
+#include <array>
+
+template< typename T , std::size_t Size >
+std::ostream& operator<< ( std::ostream& aStr , const std::array< T , Size >& aArg )
+{
+  
+  std::cout << std::hex << std::showbase;
+
+  for( int i(0); i!=Size; ++i ) aStr << std::format( "[{}]" , i ) << aArg[i] << " ";
+  return aStr;
+}
+
+template< typename T >
+std::ostream& operator<< ( std::ostream& aStr , const std::vector< T >& aArg )
+{
+  
+  std::cout << std::hex << std::showbase;
+
+  for( int i(0); i!=aArg.size(); ++i ) aStr << std::format( "[{}]" , i ) << aArg[i] << " ";
+  return aStr;
+}
+// ------------------------------------------------------------------------------
+
+
+
+
+
+
 
 template < typename Derived >
 struct magic
@@ -21,6 +55,11 @@ struct magic
     this->Apply( [&]( auto&&... params ){ ( (params=aB) , ... ); } ); // Variadic lambda invoking a C++17 fold-expression
   }
 
+  const std::vector< std::string >& MagicFields() const
+  {
+    return static_cast< const Derived* >( this )->ImplementMagicFields();
+  }
+  
 };
 
 
@@ -66,5 +105,5 @@ std::vector< std::string > MagicDelimeter( const std::string& aStr )
 #define MAGIC( ... ) \
   template< typename __________U__________ > void Implement( const __________U__________& aFn )       { aFn( __VA_ARGS__ ); } \
   template< typename __________U__________ > void Implement( const __________U__________& aFn ) const { aFn( __VA_ARGS__ ); } \
-  const std::vector< std::string >& MagicFields() const { static const std::vector<std::string> v = MagicDelimeter( #__VA_ARGS__ ); return v; }
+  const std::vector< std::string >& ImplementMagicFields() const { static const std::vector<std::string> v = MagicDelimeter( #__VA_ARGS__ ); return v; }
 

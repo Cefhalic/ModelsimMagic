@@ -10,8 +10,20 @@
 #include <iomanip>
 #include <array>
 #include <format>
+#include <map>
 
 #include "Magic.hpp"
+
+
+// ------------------------------------------------------------------------------
+void print( mtiSignalIdT& aMtiId )
+{
+  char* lName = mti_GetSignalNameIndirect( aMtiId , NULL , 0 );
+  std::cout << "MTI " << lName << std::endl;
+  mti_VsimFree( lName );
+}
+// ------------------------------------------------------------------------------
+
 
 // ===============================================================================================
 // ------------------------------------------------------------------------------
@@ -26,29 +38,33 @@ typedef enum {
   STD_LOGIC_H,
   STD_LOGIC_D
 } standardLogicType;
+
+std::map< mtiTypeKindT , std::string > TypeKind = { {MTI_TYPE_SCALAR,"Integer"} , {MTI_TYPE_ARRAY,"Array"} , {MTI_TYPE_RECORD,"Record"} , {MTI_TYPE_ENUM,"Enumeration"} };
 // ------------------------------------------------------------------------------
 
 // ------------------------------------------------------------------------------
 void mti_get( mtiSignalIdT& aMtiId , uint64_t& aWord )
 {
-  auto lType = mti_GetTypeKind( mti_GetSignalType( aMtiId ) );
+  auto lKind = mti_GetTypeKind( mti_GetSignalType( aMtiId ) );
   
-  if( lType == MTI_TYPE_SCALAR ) {
+  if( lKind == MTI_TYPE_SCALAR ) {
     aWord = mti_GetSignalValue(aMtiId);  
   } else {        
     auto Size = mti_TickLength( mti_GetSignalType( aMtiId ) );
 
-    mtiSignalIdT *lBuf;
-    lBuf = mti_GetSignalSubelements( aMtiId , 0 );
+    mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
 
-    uint64_t lInt(0);
-    uint64_t lMask(0x8000000000000000);
+    // uint64_t lInt(0);
+    // uint64_t lMask(0x8000000000000000);
+    aWord = 0;
+    uint64_t lMask( 1 << (Size-1) );     
     for ( int i(0); i != Size; ++i ) {
-      if( mti_GetSignalValue(lBuf[i])==STD_LOGIC_1 ) lInt |= lMask;
+      if( mti_GetSignalValue(lBuf[i])==STD_LOGIC_1 ) aWord |= lMask;      
+      // if( mti_GetSignalValue(lBuf[i])==STD_LOGIC_1 ) lInt |= lMask;
       lMask >>= 1;
     }
 
-    aWord = lInt >> (64-Size);
+    // aWord = lInt >> (64-Size);
     mti_VsimFree( lBuf );  
   }
 }
@@ -57,24 +73,25 @@ void mti_get( mtiSignalIdT& aMtiId , uint64_t& aWord )
 // ------------------------------------------------------------------------------
 void mti_get( mtiSignalIdT& aMtiId , int64_t& aWord )
 {
-  auto lType = mti_GetTypeKind( mti_GetSignalType( aMtiId ) );
+  auto lKind = mti_GetTypeKind( mti_GetSignalType( aMtiId ) );
   
-  if( lType == MTI_TYPE_SCALAR ) {
+  if( lKind == MTI_TYPE_SCALAR ) {
     aWord = mti_GetSignalValue(aMtiId);  
   } else {        
     auto Size = mti_TickLength( mti_GetSignalType( aMtiId ) );
 
-    mtiSignalIdT *lBuf;
-    lBuf = mti_GetSignalSubelements( aMtiId , 0 );
+    mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
 
-    int64_t lInt(0);
-    uint64_t lMask(0x8000000000000000);
+    // int64_t lInt(0);
+    aWord = 0;
+    uint64_t lMask( 1 << (Size-1) );    
     for ( int i(0); i != Size; ++i ) {
-      if( mti_GetSignalValue(lBuf[i])==STD_LOGIC_1 ) lInt |= lMask;
+      if( mti_GetSignalValue(lBuf[i])==STD_LOGIC_1 ) aWord |= lMask;
+      // if( mti_GetSignalValue(lBuf[i])==STD_LOGIC_1 ) lInt |= lMask;
       lMask >>= 1;
     }
 
-    aWord = lInt >> (64-Size);
+    // aWord = lInt >> (64-Size);
     mti_VsimFree( lBuf );  
   }
 }
@@ -92,16 +109,17 @@ void mti_get( mtiSignalIdT& aMtiId , bool& aBool )
 template< typename T , std::size_t Size >
 void mti_get( mtiSignalIdT& aMtiId , std::array< T , Size >& aParallel )
 {
-  auto FliSize = mti_TickLength( mti_GetSignalType( aMtiId ) );
-  if( FliSize != Size )
-  {
-    mti_PrintFormatted( "FLI size (%i) != C++ size (%i)" , FliSize , Size );
-    mti_FatalError();
-  }
+  auto lType = mti_GetSignalType( aMtiId );
+  auto lKind = mti_GetTypeKind( lType );
+  if( lKind != MTI_TYPE_ARRAY ) throw std::runtime_error( "Expect array-types" );
+
+  auto FliSize = mti_TickLength( lType );
+  if( FliSize != Size ) throw std::runtime_error( std::format( "FLI size ({}) != C++ size ({})" , FliSize , Size ) );
   
-  mtiSignalIdT *lBuf;  
-  lBuf = mti_GetSignalSubelements( aMtiId , 0 );
-  mtiTypeIdT lType = mti_GetSignalType( aMtiId );
+  mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
+
+  // for ( int i(0); i != Size; ++i ) std::cout << i << " : " <<  lBuf[i] << " : " << aParallel[i] << std::endl;
+  // std::cout << TypeKind[ lKind ] << " " << typeid( aParallel ).name() << std::endl;
 
   if( mti_TickLeft( lType ) < mti_TickRight( lType ) ) {
     for ( int i(0); i != Size; ++i ) mti_get( lBuf[i] , aParallel[i] );
@@ -114,30 +132,13 @@ void mti_get( mtiSignalIdT& aMtiId , std::array< T , Size >& aParallel )
 // ------------------------------------------------------------------------------
 
 // ------------------------------------------------------------------------------
-void mti_get_magic ( mtiSignalIdT* aBuf )
-{}
-// ------------------------------------------------------------------------------
-
-// ------------------------------------------------------------------------------
-template< typename S , typename... T >
-void mti_get_magic ( mtiSignalIdT* aBuf , S& aArg , T&&... aRest )
-{
-  // char* lName = mti_GetSignalNameIndirect( *aBuf , NULL , 0 );
-  // std::cout << "MTI " << lName << std::endl;
-  mti_get( *aBuf , aArg );
-  mti_get_magic ( ++aBuf , aRest... );
-  // mti_VsimFree( lName );
-}
-// ------------------------------------------------------------------------------
-
-// ------------------------------------------------------------------------------
 template< typename T >
 void mti_get( mtiSignalIdT& aMtiId , magic< T > & aArg )
 {
   // std::cout << "C++ " << aArg.MagicFields() << std::endl;  
-  mtiSignalIdT *lBuf;
-  lBuf = mti_GetSignalSubelements( aMtiId , 0 );
-  aArg.Apply( [ lBuf ]( auto&&... params ){ mti_get_magic( lBuf , params... ); } );
+  mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
+  mtiSignalIdT* lPtr( lBuf );
+  aArg.Apply( [ & ]( auto&&... params ){ ( mti_get( *lPtr++ , params ) , ... ); } );
   mti_VsimFree( lBuf );
 }
 // ------------------------------------------------------------------------------
@@ -154,17 +155,17 @@ void mti_get( mtiSignalIdT& aMtiId , magic< T > & aArg )
 // ------------------------------------------------------------------------------
 void mti_set( mtiSignalIdT& aMtiId , const uint64_t& aWord )
 {
-  auto lType = mti_GetTypeKind( mti_GetSignalType( aMtiId ) );
+  auto lKind = mti_GetTypeKind( mti_GetSignalType( aMtiId ) );
   
-  if( lType == MTI_TYPE_SCALAR ) {
+  if( lKind == MTI_TYPE_SCALAR ) {
     mti_SetSignalValue( aMtiId , aWord );  
   } else {   
     auto Size = mti_TickLength( mti_GetSignalType( aMtiId ) );
 
-    mtiSignalIdT *lBuf;
-    lBuf = mti_GetSignalSubelements( aMtiId , 0 );
+    mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
 
-    uint64_t lMask(0x8000000000000000);
+//    uint64_t lMask(0x8000000000000000);
+    uint64_t lMask( 1 << (Size-1) );
     for ( int i(0); i != Size; ++i ) {
       mti_SetSignalValue( lBuf[i] , (aWord&lMask) ? STD_LOGIC_1 : STD_LOGIC_0 );
       lMask >>= 1;
@@ -178,17 +179,17 @@ void mti_set( mtiSignalIdT& aMtiId , const uint64_t& aWord )
 // ------------------------------------------------------------------------------
 void mti_set( mtiSignalIdT& aMtiId , const int64_t& aWord )
 {
-  auto lType = mti_GetTypeKind( mti_GetSignalType( aMtiId ) );
+  auto lKind = mti_GetTypeKind( mti_GetSignalType( aMtiId ) );
   
-  if( lType == MTI_TYPE_SCALAR ) {
+  if( lKind == MTI_TYPE_SCALAR ) {
     mti_SetSignalValue( aMtiId , aWord );  
   } else {
     auto Size = mti_TickLength( mti_GetSignalType( aMtiId ) );
 
-    mtiSignalIdT *lBuf;
-    lBuf = mti_GetSignalSubelements( aMtiId , 0 );
+    mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
 
-    uint64_t lMask(0x8000000000000000);
+    // uint64_t lMask(0x8000000000000000);
+    uint64_t lMask( 1 << (Size-1) );    
     for ( int i(0); i != Size; ++i ) {
       mti_SetSignalValue( lBuf[i] , (aWord&lMask) ? STD_LOGIC_1 : STD_LOGIC_0 );
       lMask >>= 1;
@@ -211,18 +212,14 @@ void mti_set( mtiSignalIdT& aMtiId , const bool& aBool )
 template< typename T , std::size_t Size >
 void mti_set( mtiSignalIdT& aMtiId , const std::array< T , Size >& aParallel )
 {
-  auto FliSize = mti_TickLength( mti_GetSignalType( aMtiId ) );
-  if( FliSize != Size )
-  {
-    mti_PrintFormatted( "FLI size (%i) != C++ size (%i)" , FliSize , Size );
-    mti_FatalError();
-  }
-  
-  mtiSignalIdT *lBuf;  
-  lBuf = mti_GetSignalSubelements( aMtiId , 0 );
-  mtiTypeIdT lType = mti_GetSignalType( aMtiId );
+  auto lType = mti_GetSignalType( aMtiId );
+  auto lKind = mti_GetTypeKind( lType );
+  if( lKind != MTI_TYPE_ARRAY ) throw std::runtime_error( "Expect array-types" );
 
-  // for ( int i(0); i != Size; ++i ) std::cout << i << " : " <<  lBuf[i] << " : " << aParallel[i] << std::endl;
+  auto FliSize = mti_TickLength( lType );
+  if( FliSize != Size ) throw std::runtime_error( std::format( "FLI size ({}) != C++ size ({})" , FliSize , Size ) );
+  
+  mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
 
   if( mti_TickLeft( lType ) < mti_TickRight( lType ) ) {
     for ( int i(0); i != Size; ++i ) mti_set( lBuf[i] , aParallel[i] );
@@ -235,30 +232,13 @@ void mti_set( mtiSignalIdT& aMtiId , const std::array< T , Size >& aParallel )
 // ------------------------------------------------------------------------------
 
 // ------------------------------------------------------------------------------
-void mti_set_magic ( mtiSignalIdT* aBuf )
-{}
-// ------------------------------------------------------------------------------
-
-// ------------------------------------------------------------------------------
-template< typename S , typename... T >
-void mti_set_magic ( mtiSignalIdT* aBuf , S& aArg , T&&... aRest )
-{
-  // char* lName = mti_GetSignalNameIndirect( *aBuf , NULL , 0 );
-  // std::cout << "MTI " << lName << std::endl;
-  mti_set( *aBuf , aArg );
-  mti_set_magic ( ++aBuf , aRest... );
-  // mti_VsimFree( lName );
-}
-// ------------------------------------------------------------------------------
-
-// ------------------------------------------------------------------------------
 template< typename T >
 void mti_set( mtiSignalIdT& aMtiId , const magic< T > & aArg )
 {
   // std::cout << "C++ " << aArg.MagicFields() << std::endl;  
-  mtiSignalIdT *lBuf;
-  lBuf = mti_GetSignalSubelements( aMtiId , 0 );
-  aArg.Apply( [ lBuf ]( auto&&... params ){ mti_set_magic( lBuf , params... ); } );
+  mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
+  mtiSignalIdT* lPtr( lBuf );
+  aArg.Apply( [ & ]( auto&&... params ){ ( mti_set( *lPtr++ , params ) , ... ); } );
   mti_VsimFree( lBuf );
 }
 // ------------------------------------------------------------------------------
@@ -316,7 +296,6 @@ struct ModelsimSignal
     if( mSignal == NULL ) throw std::runtime_error( "Signal not connected" );
     mti_set( mSignal , mData ); 
   }
-
     
 };
 
@@ -326,9 +305,6 @@ std::ostream& operator<< ( std::ostream& aStr , const ModelsimSignal< T >& aArg 
   return ( aStr << aArg.mData );
 }
 // ------------------------------------------------------------------------------
-
-
-
 
 
 
