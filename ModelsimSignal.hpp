@@ -42,8 +42,11 @@ typedef enum {
 std::map< mtiTypeKindT , std::string > TypeKind = { {MTI_TYPE_SCALAR,"Integer"} , {MTI_TYPE_ARRAY,"Array"} , {MTI_TYPE_RECORD,"Record"} , {MTI_TYPE_ENUM,"Enumeration"} };
 // ------------------------------------------------------------------------------
 
+
+
 // ------------------------------------------------------------------------------
-void mti_get( mtiSignalIdT& aMtiId , uint64_t& aWord )
+template< typename T >
+void mti_get_int( mtiSignalIdT& aMtiId , T& aWord )
 {
   auto lKind = mti_GetTypeKind( mti_GetSignalType( aMtiId ) );
   
@@ -51,6 +54,8 @@ void mti_get( mtiSignalIdT& aMtiId , uint64_t& aWord )
     aWord = mti_GetSignalValue(aMtiId);  
   } else {        
     auto Size = mti_TickLength( mti_GetSignalType( aMtiId ) );
+
+    if( Size > 8*sizeof(T) ) throw std::runtime_error( std::format( "FLI size ({}) != C++ size ({})" , Size , 8*sizeof(T) ) );
 
     mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
 
@@ -67,28 +72,17 @@ void mti_get( mtiSignalIdT& aMtiId , uint64_t& aWord )
 // ------------------------------------------------------------------------------
 
 // ------------------------------------------------------------------------------
-void mti_get( mtiSignalIdT& aMtiId , int64_t& aWord )
-{
-  auto lKind = mti_GetTypeKind( mti_GetSignalType( aMtiId ) );
-  
-  if( lKind == MTI_TYPE_SCALAR ) {
-    aWord = mti_GetSignalValue(aMtiId);  
-  } else {        
-    auto Size = mti_TickLength( mti_GetSignalType( aMtiId ) );
-
-    mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
-
-    aWord = 0;
-    uint64_t lMask( 1 << (Size-1) );    
-    for ( int i(0); i != Size; ++i ) {
-      if( mti_GetSignalValue(lBuf[i])==STD_LOGIC_1 ) aWord |= lMask;
-      lMask >>= 1;
-    }
-
-    mti_VsimFree( lBuf );     
-  }
-}
+void mti_get( mtiSignalIdT& aMtiId ,  uint8_t& aWord ){ mti_get_int( aMtiId , aWord ); }
+void mti_get( mtiSignalIdT& aMtiId , uint16_t& aWord ){ mti_get_int( aMtiId , aWord ); }
+void mti_get( mtiSignalIdT& aMtiId , uint32_t& aWord ){ mti_get_int( aMtiId , aWord ); }
+void mti_get( mtiSignalIdT& aMtiId , uint64_t& aWord ){ mti_get_int( aMtiId , aWord ); }
+void mti_get( mtiSignalIdT& aMtiId ,   int8_t& aWord ){ mti_get_int( aMtiId , aWord ); }
+void mti_get( mtiSignalIdT& aMtiId ,  int16_t& aWord ){ mti_get_int( aMtiId , aWord ); }
+void mti_get( mtiSignalIdT& aMtiId ,  int32_t& aWord ){ mti_get_int( aMtiId , aWord ); }
+void mti_get( mtiSignalIdT& aMtiId ,  int64_t& aWord ){ mti_get_int( aMtiId , aWord ); }
 // ------------------------------------------------------------------------------
+
+
 
 // ------------------------------------------------------------------------------
 void mti_get( mtiSignalIdT& aMtiId , bool& aBool )
