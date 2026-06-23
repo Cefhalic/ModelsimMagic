@@ -7,45 +7,69 @@
 
 #include "mti.h"
 #include "Magic.hpp"
+#include "ModelsimSignal.hpp"
 
 template< typename T >
 struct ModelsimModule : public magic< T >
 { 
-  ModelsimSignal<bool> clk;
-  
-  virtual void Handler() = 0;  
+private:
+  ModelsimSignal<bool> mClk;
+  int mCounter;
+
+  virtual void Process()
+  {
+      if( !mClk.get() ) return; // On falling_edge, return  
+      callback( mCounter );
+      this->Apply( [&]( auto&&... params ){ ( params.callback( mCounter ) , ... ); } ); // Apply the callback to each signal 
+      UpdateCounter( mCounter );
+  }
    
   // The callback that will be called on each event
   static void Process( void *aStruct )
   { 
     try {
-      T* lStruct = (T*) aStruct;        
-      lStruct->Apply( []( auto&&... params ){ ( params.get_signal() , ... ); } ); // Get the current value on all magic members from Modelsim to FLI via Variadic lambda invoking a C++17 fold-expression       
-      if( ! lStruct->clk.mData ) return; // On falling_edge, return        
-      lStruct->Handler();   
-      lStruct->Apply( []( auto&&... params ){ ( params.set_signal() , ... ); } ); // Set the updated value on all magic members from Modelsim to FLI via Variadic lambda invoking a C++17 fold-expression  
+      ((T*) aStruct)->Process();        
     } catch( const std::exception& aExc ) {
       mti_PrintMessage( aExc.what() );
       mti_FatalError();      
     }
   }
 
+protected:
+  ModelsimModule( const int& aCounter = 0 ) : mClk() , mCounter( aCounter )
+  {}
+  
+  virtual void callback( const int& aCtr )
+  {}
+  
+  virtual void UpdateCounter( int& aCtr )
+  {
+    ++aCtr;
+  }
+  
+public:
   // FLI initialization algorithm
-  static void Initialization()
+  static void Initialization( const std::string& aClkName = "clk" )
   {   
     try {        
-      T* lStruct = new T();
+      T* lStruct = new T();     
+
+      // Connect the clock and use it as the trigger
+      lStruct->mClk.connect( aClkName );
+      mtiProcessIdT lProcess = mti_CreateProcessWithPriority( NULL , ModelsimModule::Process , lStruct , MTI_PROC_POSTPONED );
+      mti_Sensitize( lProcess , lStruct->mClk.mSignal , MTI_EVENT );    
+
+      // Connect the magic fields by name
       auto lIt = lStruct->MagicFields().begin();
       lStruct->Apply( [&]( auto&&... params ){ ( params.connect( lIt++ -> c_str() ) , ... ); } );      
-      mtiProcessIdT lProcess = mti_CreateProcessWithPriority( NULL , ModelsimModule::Process , lStruct , MTI_PROC_POSTPONED );
-      mti_Sensitize( lProcess , lStruct->clk.mSignal , MTI_EVENT );    
+
+      lStruct->callback( 0 );
+          
     } catch( const std::exception& aExc ) {
       mti_PrintMessage( aExc.what() );
       mti_FatalError();      
     }      
   }
-
-  // std::cout << std::hex << std::showbase << std::boolalpha;
   
 };
 

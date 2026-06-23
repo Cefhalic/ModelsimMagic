@@ -57,9 +57,16 @@ struct magic
 
   const std::vector< std::string >& MagicFields() const
   {
-    return static_cast< const Derived* >( this )->ImplementMagicFields();
+    static const std::vector<std::string> v = MagicDelimeter( static_cast< const Derived* >( this )->MagicString() ); 
+    return v;
   }
   
+private:
+  static std::vector< std::string > MagicDelimeter( const std::string& aStr )
+  {
+    const std::regex lRegex( "\\s*,\\s*" ); 
+    return std::vector<std::string>( std::sregex_token_iterator( aStr.begin(), aStr.end(), lRegex , -1 ), std::sregex_token_iterator() );  
+  }  
 };
 
 
@@ -96,14 +103,7 @@ bool operator== ( const magic< T >& aA , const magic< T >& aB )
 }
 
 
-std::vector< std::string > MagicDelimeter( const std::string& aStr )
-{
-  const std::regex lRegex( "\\s*,\\s*" ); 
-  return std::vector<std::string>( std::sregex_token_iterator( aStr.begin(), aStr.end(), lRegex , -1 ), std::sregex_token_iterator() );  
-}
-
 #define MAGIC( ... ) \
   template< typename __________U__________ > void Implement( const __________U__________& aFn )       { aFn( __VA_ARGS__ ); } \
   template< typename __________U__________ > void Implement( const __________U__________& aFn ) const { aFn( __VA_ARGS__ ); } \
-  const std::vector< std::string >& ImplementMagicFields() const { static const std::vector<std::string> v = MagicDelimeter( #__VA_ARGS__ ); return v; }
-
+  std::string MagicString() const { return #__VA_ARGS__ ; }

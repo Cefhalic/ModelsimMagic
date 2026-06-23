@@ -247,60 +247,51 @@ void mti_set( mtiSignalIdT& aMtiId , const magic< T > & aArg )
 template< typename T >
 class ModelsimSignal
 {
-template< typename U > friend class ModelsimModule;  
+private:
+  template< typename U > friend class ModelsimModule;  
   
-protected:
+// protected:
   mtiSignalIdT mSignal;
-  T mData;
 
-public:
-  ModelsimSignal() : mSignal( NULL ) , mData()
+public:  
+  ModelsimSignal() : mSignal( NULL )
   {}
 
-  ModelsimSignal( const char* aName ) : mSignal( NULL ) , mData()
-  {   
-    connect( aName );
-  }
+  virtual void callback( const int& aCtr )
+  {}
 
-  void connect( const char* aName )
+  void connect( const std::string& aName )
   {
     if( mSignal != NULL ) throw std::runtime_error( "Signal already connected" );
-    mSignal = mti_FindSignal( (char*)(aName) );
+    mSignal = mti_FindSignal( (char*)(aName.c_str()) );
     if( mSignal == NULL ) throw std::runtime_error( std::format( "Signal '{}' not found" , aName ) );
+    
+    // TYPE AND BOUNDS CHECK HERE??????
   }
-  
-  void get_signal()
+
+  T get()
   { 
     if( mSignal == NULL ) throw std::runtime_error( "Signal not connected" );
-    mti_get( mSignal , mData ); 
+    T lData;
+    mti_get( mSignal , lData ); 
+    return lData;
   }
 
-  void set_signal()
+  void set( const T& aData )
   { 
     if( mSignal == NULL ) throw std::runtime_error( "Signal not connected" );
-    mti_set( mSignal , mData ); 
+    mti_set( mSignal , aData ); 
   }
-    
-  T& value()
-  {
-    return mData;
-  }    
   
-  T& operator* ()
+  std::string name()
   {
-    return mData;
-  }   
-
-  T* operator-> ()
-  {
-    return &mData;
-  }   
-
-  void set( const T& aRef )
-  {
-    mData = aRef;
-  }  
-    
+    if( mSignal == NULL ) throw std::runtime_error( "Signal not connected" );    
+    char* lName = mti_GetSignalNameIndirect( mSignal , NULL , 0 );
+    std::string lStr( lName );
+    mti_VsimFree( lName );
+    return lName;
+  }
+  
 };
 
 // template< typename T >
@@ -309,35 +300,3 @@ public:
   // return ( aStr << aArg.mData );
 // }
 // ------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-// ------------------------------------------------------------------------------
-template< typename T , std::size_t size>
-class ModelsimPipeline : public ModelsimSignal< std::array< T , size > >
-{
-public:
-
-  void set0( const T& aRef )
-  {
-    for( int i=(size-1); i!=0 ; --i ) this->mData.at(i) = this->mData.at(i-1); // SHOULD CHECK mSignal ticks to get direction
-    this->mData.at(0) = aRef;
-  } 
-
-  T& value0()
-  {
-    return this->mData.at(0);
-  }  
-  
-};
-// ------------------------------------------------------------------------------
-
-
-
-
