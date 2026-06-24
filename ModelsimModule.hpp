@@ -21,7 +21,7 @@ private:
       if( !mClk.get() ) return; // On falling_edge, return  
       callback( mCounter );
       this->Apply( [&]( auto&&... params ){ ( params.callback( mCounter ) , ... ); } ); // Apply the callback to each signal 
-      UpdateCounter( mCounter );
+      ++mCounter;
   }
    
   // The callback that will be called on each event
@@ -35,6 +35,17 @@ private:
     }
   }
 
+  static void SimStatus( void *aStruct , int aRunStatus )
+  { 
+    try{
+      if( aRunStatus ) ((T*) aStruct)->pre_run(); 
+      else             ((T*) aStruct)->post_run(); 
+    } catch( const std::exception& aExc ) {
+      mti_PrintMessage( aExc.what() );
+      mti_FatalError();      
+    }
+  }  
+
 protected:
   ModelsimModule( const int& aCounter = 0 ) : mClk() , mCounter( aCounter )
   {}
@@ -42,17 +53,21 @@ protected:
   virtual void callback( const int& aCtr )
   {}
   
-  virtual void UpdateCounter( int& aCtr )
-  {
-    ++aCtr;
-  }
-  
+  virtual void pre_run()
+  {}  
+
+  virtual void post_run()
+  {} 
+    
 public:
   // FLI initialization algorithm
   static void Initialization( const std::string& aClkName = "clk" )
   {   
     try {        
       T* lStruct = new T();     
+
+      // Connect the simulation-status callback
+      mti_AddSimStatusCB( SimStatus , lStruct );
 
       // Connect the clock and use it as the trigger
       lStruct->mClk.connect( aClkName );

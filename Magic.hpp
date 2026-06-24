@@ -15,6 +15,13 @@
 // Utility
 #include <format>
 #include <array>
+#include <cstdint>
+
+std::ostream& operator<<( std::ostream& aStr , const std::uint8_t& aArg )
+{
+    aStr << static_cast<int>( aArg );
+    return aStr;
+}
 
 template< typename T , std::size_t Size >
 std::ostream& operator<< ( std::ostream& aStr , const std::array< T , Size >& aArg )
