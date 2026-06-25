@@ -32,8 +32,6 @@ typedef enum {
 std::map< mtiTypeKindT , std::string > TypeKind = { {MTI_TYPE_SCALAR,"Integer"} , {MTI_TYPE_ARRAY,"Array"} , {MTI_TYPE_RECORD,"Record"} , {MTI_TYPE_ENUM,"Enumeration"} };
 // ------------------------------------------------------------------------------
 
-
-
 // ------------------------------------------------------------------------------
 template< typename T >
 void mti_get_int( mtiSignalIdT& aMtiId , T& aWord )
@@ -46,13 +44,14 @@ void mti_get_int( mtiSignalIdT& aMtiId , T& aWord )
     auto Size = mti_TickLength( mti_GetSignalType( aMtiId ) );
     if( Size > 8*sizeof(T) ) throw std::runtime_error( std::format( "FLI size ({}) != C++ size ({})" , Size , 8*sizeof(T) ) );
 
-    mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
+    aWord = 0; 
 
-    aWord = 0;
-    uint64_t lMask( 1 << (Size-1) );     
-    for ( int i(0); i != Size; ++i ) {
-      if( mti_GetSignalValue(lBuf[i])==STD_LOGIC_1 ) aWord |= lMask;      
-      lMask >>= 1;
+    mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
+  
+    T lMask( 1 ); 
+    mtiSignalIdT* lPtr( lBuf + Size-1 );    
+    for ( int i(0); i != Size; ++i , lMask <<=1 , --lPtr ) {
+      if( mti_GetSignalValue( *lPtr )==STD_LOGIC_1 ) aWord |= lMask;      
     }
 
     mti_VsimFree( lBuf );    
@@ -139,10 +138,10 @@ void mti_set_int( mtiSignalIdT& aMtiId , const T& aWord )
 
     mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
 
-    uint64_t lMask( 1 << (Size-1) );    
-    for ( int i(0); i != Size; ++i ) {
-      mti_SetSignalValue( lBuf[i] , (aWord&lMask) ? STD_LOGIC_1 : STD_LOGIC_0 );
-      lMask >>= 1;
+    T lMask( 1 ); 
+    mtiSignalIdT* lPtr( lBuf + Size-1 );    
+    for ( int i(0); i != Size; ++i , lMask <<=1 , --lPtr ) {  
+      mti_SetSignalValue( *lPtr , (aWord&lMask) ? STD_LOGIC_1 : STD_LOGIC_0 );      
     }
     
     mti_VsimFree( lBuf );      
