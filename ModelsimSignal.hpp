@@ -36,20 +36,24 @@ std::map< mtiTypeKindT , std::string > TypeKind = { {MTI_TYPE_SCALAR,"Integer"} 
 template< typename T >
 void mti_get_int( mtiSignalIdT& aMtiId , T& aWord )
 {
-  auto lKind = mti_GetTypeKind( mti_GetSignalType( aMtiId ) );
+  auto lType = mti_GetSignalType( aMtiId );
+  auto lKind = mti_GetTypeKind( lType );
   
   if( lKind == MTI_TYPE_SCALAR ) {
     aWord = mti_GetSignalValue(aMtiId);  
   } else {        
-    auto Size = mti_TickLength( mti_GetSignalType( aMtiId ) );
+    auto Size = mti_TickLength( lType );
     if( Size > 8*sizeof(T) ) throw std::runtime_error( std::format( "FLI size ({}) != C++ size ({})" , Size , 8*sizeof(T) ) );
 
+    // char* lName = mti_GetSignalNameIndirect( aMtiId , NULL , 0 );
+    // std::cout << lName << " " << Size << " " << mti_TickLeft( lType ) << " " << mti_TickRight( lType ) << std::endl;   
+    // mti_VsimFree( lName );    
+    
     aWord = 0; 
-
     mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
   
     T lMask( 1 ); 
-    mtiSignalIdT* lPtr( lBuf + Size-1 );    
+    mtiSignalIdT* lPtr( lBuf + Size - 1 );    
     for ( int i(0); i != Size; ++i , lMask <<=1 , --lPtr ) {
       if( mti_GetSignalValue( *lPtr )==STD_LOGIC_1 ) aWord |= lMask;      
     }
@@ -128,15 +132,20 @@ void mti_get( mtiSignalIdT& aMtiId , magic< T > & aArg )
 template< typename T >
 void mti_set_int( mtiSignalIdT& aMtiId , const T& aWord )
 {
-  auto lKind = mti_GetTypeKind( mti_GetSignalType( aMtiId ) );
+  auto lType = mti_GetSignalType( aMtiId );  
+  auto lKind = mti_GetTypeKind( lType );
   
   if( lKind == MTI_TYPE_SCALAR ) {
     mti_SetSignalValue( aMtiId , aWord );  
   } else {
-    auto Size = mti_TickLength( mti_GetSignalType( aMtiId ) );
+    auto Size = mti_TickLength( lType );
     if( Size > 8*sizeof(T) ) throw std::runtime_error( std::format( "FLI size ({}) != C++ size ({})" , Size , 8*sizeof(T) ) );
 
     mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
+
+    // char* lName = mti_GetSignalNameIndirect( aMtiId , NULL , 0 );
+    // std::cout << lName << " | " << mti_TickLow( lType ) << " " << mti_TickHigh( lType ) << " | " << mti_TickLeft( lType ) << " " << mti_TickRight( lType ) << " | " << std::format( "{:016x}" , aWord ) << std::endl;   
+    // mti_VsimFree( lName );    
 
     T lMask( 1 ); 
     mtiSignalIdT* lPtr( lBuf + Size-1 );    
