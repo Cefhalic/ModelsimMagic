@@ -36,19 +36,13 @@ std::map< mtiTypeKindT , std::string > TypeKind = { {MTI_TYPE_SCALAR,"Integer"} 
 template< typename T >
 void mti_get_int( mtiSignalIdT& aMtiId , T& aWord )
 {
-  auto lType = mti_GetSignalType( aMtiId );
+  auto lType = mti_GetSignalType( aMtiId ); 
   auto lKind = mti_GetTypeKind( lType );
   
   if( lKind == MTI_TYPE_SCALAR ) {
     aWord = mti_GetSignalValue(aMtiId);  
-  } else {        
-    auto Size = mti_TickLength( lType );
-    if( Size > 8*sizeof(T) ) throw std::runtime_error( std::format( "FLI size ({}) != C++ size ({})" , Size , 8*sizeof(T) ) );
-
-    // char* lName = mti_GetSignalNameIndirect( aMtiId , NULL , 0 );
-    // std::cout << lName << " " << Size << " " << mti_TickLeft( lType ) << " " << mti_TickRight( lType ) << std::endl;   
-    // mti_VsimFree( lName );    
-    
+  } else { 
+    auto Size = mti_TickLength( lType );  
     aWord = 0; 
     mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
   
@@ -87,12 +81,6 @@ template< typename T , std::size_t Size >
 void mti_get( mtiSignalIdT& aMtiId , std::array< T , Size >& aParallel )
 {
   auto lType = mti_GetSignalType( aMtiId );
-  auto lKind = mti_GetTypeKind( lType );
-  if( lKind != MTI_TYPE_ARRAY ) throw std::runtime_error( "Expect array-types" );
-
-  auto FliSize = mti_TickLength( lType );
-  if( FliSize != Size ) throw std::runtime_error( std::format( "FLI size ({}) != C++ size ({})" , FliSize , Size ) );
-  
   mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
 
   if( mti_TickLeft( lType ) < mti_TickRight( lType ) ) {
@@ -109,7 +97,6 @@ void mti_get( mtiSignalIdT& aMtiId , std::array< T , Size >& aParallel )
 template< typename T >
 void mti_get( mtiSignalIdT& aMtiId , magic< T > & aArg )
 {
-  // std::cout << "C++ " << aArg.MagicFields() << std::endl;  
   mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
   mtiSignalIdT* lPtr( lBuf );
   aArg.Apply( [ & ]( auto&&... params ){ ( mti_get( *lPtr++ , params ) , ... ); } );
@@ -138,22 +125,16 @@ void mti_get( mtiSignalIdT& aMtiId , T* aPtr );
 // ------------------------------------------------------------------------------
 template< typename T >
 void mti_set_int( mtiSignalIdT& aMtiId , const T& aWord )
-{
-  auto lType = mti_GetSignalType( aMtiId );  
+{ 
+  auto lType = mti_GetSignalType( aMtiId ); 
   auto lKind = mti_GetTypeKind( lType );
   
   if( lKind == MTI_TYPE_SCALAR ) {
     mti_SetSignalValue( aMtiId , aWord );  
   } else {
-    auto Size = mti_TickLength( lType );
-    if( Size > 8*sizeof(T) ) throw std::runtime_error( std::format( "FLI size ({}) != C++ size ({})" , Size , 8*sizeof(T) ) );
-
+    auto Size = mti_TickLength( lType );      
     mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
-
-    // char* lName = mti_GetSignalNameIndirect( aMtiId , NULL , 0 );
-    // std::cout << lName << " | " << mti_TickLow( lType ) << " " << mti_TickHigh( lType ) << " | " << mti_TickLeft( lType ) << " " << mti_TickRight( lType ) << " | " << std::format( "{:016x}" , aWord ) << std::endl;   
-    // mti_VsimFree( lName );    
-
+    
     T lMask( 1 ); 
     mtiSignalIdT* lPtr( lBuf + Size-1 );    
     for ( int i(0); i != Size; ++i , lMask <<=1 , --lPtr ) {  
@@ -189,12 +170,6 @@ template< typename T , std::size_t Size >
 void mti_set( mtiSignalIdT& aMtiId , const std::array< T , Size >& aParallel )
 {
   auto lType = mti_GetSignalType( aMtiId );
-  auto lKind = mti_GetTypeKind( lType );
-  if( lKind != MTI_TYPE_ARRAY ) throw std::runtime_error( "Expect array-types" );
-
-  auto FliSize = mti_TickLength( lType );
-  if( FliSize != Size ) throw std::runtime_error( std::format( "FLI size ({}) != C++ size ({})" , FliSize , Size ) );
-  
   mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
 
   if( mti_TickLeft( lType ) < mti_TickRight( lType ) ) {
@@ -211,7 +186,6 @@ void mti_set( mtiSignalIdT& aMtiId , const std::array< T , Size >& aParallel )
 template< typename T >
 void mti_set( mtiSignalIdT& aMtiId , const magic< T > & aArg )
 {
-  // std::cout << "C++ " << aArg.MagicFields() << std::endl;  
   mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
   mtiSignalIdT* lPtr( lBuf );
   aArg.Apply( [ & ]( auto&&... params ){ ( mti_set( *lPtr++ , params ) , ... ); } );
@@ -229,6 +203,88 @@ void mti_set( mtiSignalIdT& aMtiId , const T* aPtr );
 
 // ===============================================================================================
 
+
+
+
+
+// ===============================================================================================
+// ------------------------------------------------------------------------------
+template< typename T >
+void mti_validate_int( mtiSignalIdT& aMtiId , const T& aWord )
+{
+  auto lType = mti_GetSignalType( aMtiId );  
+  auto Size = mti_TickLength( lType );
+  if( Size > 8*sizeof(T) ) throw std::runtime_error( std::format( "FLI size ({}) != C++ size ({})" , Size , 8*sizeof(T) ) );
+}
+// ------------------------------------------------------------------------------
+
+// ------------------------------------------------------------------------------
+void mti_validate( mtiSignalIdT& aMtiId , const  uint8_t& aWord ){ mti_validate_int( aMtiId , aWord ); }
+void mti_validate( mtiSignalIdT& aMtiId , const uint16_t& aWord ){ mti_validate_int( aMtiId , aWord ); }
+void mti_validate( mtiSignalIdT& aMtiId , const uint32_t& aWord ){ mti_validate_int( aMtiId , aWord ); }
+void mti_validate( mtiSignalIdT& aMtiId , const uint64_t& aWord ){ mti_validate_int( aMtiId , aWord ); }
+void mti_validate( mtiSignalIdT& aMtiId , const   int8_t& aWord ){ mti_validate_int( aMtiId , aWord ); }
+void mti_validate( mtiSignalIdT& aMtiId , const  int16_t& aWord ){ mti_validate_int( aMtiId , aWord ); }
+void mti_validate( mtiSignalIdT& aMtiId , const  int32_t& aWord ){ mti_validate_int( aMtiId , aWord ); }
+void mti_validate( mtiSignalIdT& aMtiId , const  int64_t& aWord ){ mti_validate_int( aMtiId , aWord ); }
+// ------------------------------------------------------------------------------
+
+// ------------------------------------------------------------------------------
+void mti_validate( mtiSignalIdT& aMtiId , const bool& aBool )
+{}
+// ------------------------------------------------------------------------------
+
+// ------------------------------------------------------------------------------
+template< typename T , std::size_t Size >
+void mti_validate( mtiSignalIdT& aMtiId , const std::array< T , Size >& aParallel )
+{
+  auto lType = mti_GetSignalType( aMtiId );
+  auto lKind = mti_GetTypeKind( lType );
+  if( lKind != MTI_TYPE_ARRAY ) throw std::runtime_error( "Expect array-types" );
+
+  auto FliSize = mti_TickLength( lType );
+  if( FliSize != Size ) throw std::runtime_error( std::format( "FLI size ({}) != C++ size ({})" , FliSize , Size ) );
+    
+  mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
+  mti_validate( *lBuf , aParallel.at(0) );
+  mti_VsimFree( lBuf );
+  
+}
+// ------------------------------------------------------------------------------
+
+// ------------------------------------------------------------------------------
+template< typename T >
+void mti_validate_magic( const std::string& aStr , mtiSignalIdT& aMtiId , const T & aArg )
+{
+  char* lName = mti_GetSignalNameIndirect( aMtiId , NULL , 0 );
+  std::string lStr( lName );
+  mti_VsimFree( lName );  
+  lStr = lStr.substr( lStr.rfind('.')+1 );  // GetSignalNameIndirect gives the full path - only want the bit after the '.'
+  if( lStr != aStr ) throw std::runtime_error( std::format( "FLI name ({}) != C++ name ({})" , lStr , aStr ) );
+    
+  mti_validate( aMtiId , aArg );
+}
+
+template< typename T >
+void mti_validate( mtiSignalIdT& aMtiId , const magic< T > & aArg )
+{  
+  auto lIt = aArg.MagicFields().begin();
+  mtiSignalIdT* lBuf = mti_GetSignalSubelements( aMtiId , NULL );
+  mtiSignalIdT* lPtr( lBuf );
+  aArg.Apply( [ & ]( auto&&... params ){ ( mti_validate_magic( *lIt++ , *lPtr++ , params ) , ... ); } );
+  mti_VsimFree( lBuf );
+}
+// ------------------------------------------------------------------------------
+
+// ------------------------------------------------------------------------------
+// template< typename T >
+// void mti_validate( mtiSignalIdT& aMtiId , const T* aPtr );
+// {
+  // mti_validate( aMtiId , *aPtr );
+// }
+// ------------------------------------------------------------------------------
+
+// ===============================================================================================
 
 
 
@@ -262,6 +318,8 @@ public:
     if( mSignal == NULL ) throw std::runtime_error( std::format( "Signal '{}' not found" , aName ) );
     
     // TYPE AND BOUNDS CHECK HERE??????
+    T lT;
+    mti_validate( mSignal , lT );
   }
 
   T get()
