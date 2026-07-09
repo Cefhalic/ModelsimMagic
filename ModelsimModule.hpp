@@ -8,6 +8,7 @@
 #include "mti.h"
 #include "Magic.hpp"
 #include "ModelsimSignal.hpp"
+#include "ModelsimUtils.hpp"
 
 template< typename T >
 struct ModelsimModule : public magic< T >
@@ -38,6 +39,7 @@ private:
   static void SimStatus( void *aStruct , int aRunStatus )
   { 
     try{
+      SimTime( true ); // Update the time resolution at start (and end) of run
       if( aRunStatus ) ((T*) aStruct)->pre_run(); 
       else             ((T*) aStruct)->post_run(); 
     } catch( const std::exception& aExc ) {
