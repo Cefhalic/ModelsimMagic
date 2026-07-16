@@ -356,10 +356,13 @@ public:
   std::string name()
   {
     if( mSignal == NULL ) throw std::runtime_error( "Signal not connected" );    
-    char* lName = mti_GetSignalNameIndirect( mSignal , NULL , 0 );
-    std::string lStr( lName );
-    mti_VsimFree( lName );
-    return lName;
+    return GetName( mSignal );
+  }
+
+  std::string region()
+  {
+    if( mSignal == NULL ) throw std::runtime_error( "Signal not connected" );   
+    return mti_GetRegionName( mti_GetSignalRegion( mSignal ) );
   }
   
 };

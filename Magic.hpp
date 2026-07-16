@@ -94,7 +94,7 @@ std::ostream& operator<< ( std::ostream& aStr , const magic< T >& aArg )
 // }
 
 template< typename T , typename... U >
-bool Compare ( const magic< T >& aA , const U&... aB )
+bool MagicCompare ( const magic< T >& aA , const U&... aB )
 {
   bool lBool;
   aA.Apply( [&]( auto&&... params ){ lBool = ( (params==aB) && ... ); } ); // Variadic lambda invoking a C++17 fold-expression
@@ -105,7 +105,7 @@ template< typename T >
 bool operator== ( const magic< T >& aA , const magic< T >& aB )
 {  
   bool lBool;
-  aB.Apply( [&]( auto&... params ){ lBool = Compare( aA , params... ); } ); // Variadic lambda
+  aB.Apply( [&]( auto&... params ){ lBool = MagicCompare( aA , params... ); } ); // Variadic lambda
   return lBool;
 }
 
