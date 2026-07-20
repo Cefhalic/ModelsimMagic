@@ -76,7 +76,7 @@ std::ostream& operator<< ( std::ostream& aStr , const magic< T >& aArg )
 #define MAGIC( ... ) \
   template< typename __________U__________ > void Implement( const __________U__________& aFn )       { aFn( __VA_ARGS__ ); } \
   template< typename __________U__________ > void Implement( const __________U__________& aFn ) const { aFn( __VA_ARGS__ ); } \
-  std::string MagicString() const { return #__VA_ARGS__ ; }
+  inline std::string MagicString() const { return #__VA_ARGS__ ; }
 
 
 #define MAGIC_CONSTRUCTOR( CLASS ) \

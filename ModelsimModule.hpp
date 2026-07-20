@@ -48,6 +48,16 @@ private:
     }
   }  
 
+  static void Quit( void *aStruct )
+  {
+    try{
+      ((T*) aStruct)->quit(); 
+    } catch( const std::exception& aExc ) {
+      mti_PrintMessage( aExc.what() );
+      mti_FatalError();      
+    }    
+  }
+
 protected:
   ModelsimModule( const int& aCounter = 0 ) : mClk() , mCounter( aCounter )
   {}
@@ -60,6 +70,9 @@ protected:
 
   virtual void post_run()
   {} 
+
+  virtual void quit()
+  {} 
     
 public:
   // FLI initialization algorithm
@@ -70,6 +83,8 @@ public:
 
       // Connect the simulation-status callback
       mti_AddSimStatusCB( SimStatus , lStruct );
+      mti_AddRestartCB( Quit , lStruct );
+      mti_AddQuitCB( Quit , lStruct );
 
       // Connect the clock and use it as the trigger
       lStruct->mClk.connect( aClkName );
