@@ -23,7 +23,7 @@ private:
       callback( mCounter );
       this->Apply( [&]( auto&&... params ){ ( params.callback( mCounter ) , ... ); } ); // Apply the callback to each signal 
       ++mCounter;
-  }
+  }    
    
   // The callback that will be called on each event
   static void Process( void *aStruct )
@@ -31,8 +31,7 @@ private:
     try {
       ((T*) aStruct)->Process();        
     } catch( const std::exception& aExc ) {
-      mti_PrintMessage( aExc.what() );
-      mti_FatalError();      
+      ExceptionHandler( aExc );     
     }
   }
 
@@ -43,8 +42,7 @@ private:
       if( aRunStatus ) ((T*) aStruct)->pre_run(); 
       else             ((T*) aStruct)->post_run(); 
     } catch( const std::exception& aExc ) {
-      mti_PrintMessage( aExc.what() );
-      mti_FatalError();      
+      ExceptionHandler( aExc );         
     }
   }  
 
@@ -53,11 +51,21 @@ private:
     try{
       ((T*) aStruct)->quit(); 
     } catch( const std::exception& aExc ) {
-      mti_PrintMessage( aExc.what() );
-      mti_FatalError();      
+      ExceptionHandler( aExc );   
     }    
   }
 
+  static void ExceptionHandler( const std::exception& aExc )
+  {
+#ifdef BOOST_STACKTRACE_STACKTRACE_HPP      
+    boost::stacktrace::stacktrace lTrace = boost::stacktrace::stacktrace::from_current_exception(); 
+    mti_PrintMessage( std::format( "==========\n>>>>> {} <<<<<\n{}\n==========" , aExc.what() , boost::stacktrace::to_string( lTrace ) ).c_str() );     
+#else
+    mti_PrintMessage( aExc.what() );  
+#endif
+    mti_FatalError();          
+  }
+  
 protected:
   ModelsimModule( const int& aCounter = 0 ) : mClk() , mCounter( aCounter )
   {}
@@ -98,8 +106,7 @@ public:
       lStruct->callback( 0 );
           
     } catch( const std::exception& aExc ) {
-      mti_PrintMessage( aExc.what() );
-      mti_FatalError();      
+      ExceptionHandler( aExc );   
     }      
   }
   
