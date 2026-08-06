@@ -60,7 +60,7 @@ std::ostream& operator<< ( std::ostream& aStr , const magic< T >& aArg )
 {
   aStr << "(";
   auto lIt = aArg.MagicFields().begin();
-  aArg.Apply( [&]( auto&&... params ){ ( ( aStr << ' ' *lIt++ << '=' << params ) , ... ); } ); // Variadic lambda invoking a C++17 fold-expression
+  aArg.Apply( [&]( auto&&... params ){ ( ( aStr << ' ' << *lIt++ << '=' << params ) , ... ); } ); // Variadic lambda invoking a C++17 fold-expression
   aStr << " )";
   return aStr;
 }
