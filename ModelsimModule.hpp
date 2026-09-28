@@ -18,7 +18,7 @@ private:
   int mCounter;
 
   virtual void Process()
-  {
+  {     
       if( !mClk.get() ) return; // On falling_edge, return  
       callback( mCounter );
       this->Apply( [&]( auto&&... params ){ ( params.callback( mCounter ) , ... ); } ); // Apply the callback to each signal 
@@ -84,9 +84,22 @@ protected:
     
 public:
   // FLI initialization algorithm
-  static void Initialization( const std::string& aClkName = "clk" )
+  static void Initialization( const std::string& aClkName = "clk" , const std::size_t& aMaxDepth = 2 )
   {   
-    try {        
+    try {   
+
+      mtiRegionIdT regid = mti_GetCurrentRegion();
+      char* region_name = mti_GetRegionFullName( regid );
+      std::string lStr( region_name );
+      mti_VsimFree( region_name );
+      
+      if( std::count( lStr.begin() , lStr.end() , '/' ) > aMaxDepth )
+      {
+        std::cout << region_name << " exceeds maximum depth - skipping" << std::endl;
+        return;
+      }
+      
+    
       T* lStruct = new T();     
 
       // Connect the simulation-status callback
@@ -97,13 +110,15 @@ public:
       // Connect the clock and use it as the trigger
       lStruct->mClk.connect( aClkName );
       mtiProcessIdT lProcess = mti_CreateProcessWithPriority( NULL , ModelsimModule::Process , lStruct , MTI_PROC_POSTPONED );
-      mti_Sensitize( lProcess , lStruct->mClk.mSignal , MTI_EVENT );    
+      mti_Sensitize( lProcess , lStruct->mClk.mSignal , MTI_EVENT );   
 
       // Connect the magic fields by name
       auto lIt = lStruct->MagicFields().begin();
       lStruct->Apply( [&]( auto&&... params ){ ( params.connect( lIt++ -> c_str() ) , ... ); } );      
 
       lStruct->callback( 0 );
+
+
           
     } catch( const std::exception& aExc ) {
       ExceptionHandler( aExc );   
